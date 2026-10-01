@@ -126,3 +126,7 @@ La aplicación estará disponible en [http://localhost:3000](http://localhost:30
 7. **Prueba de Doble Escaneo:** Volvé a ingresar el mismo código en el escáner. El sistema responderá:
    `❌ ENTRADA YA UTILIZADA — Acceso Denegado (Muestra hora del 1er ingreso)`.
 8. **Métricas en Vivo:** Cambiá al rol **ORGANIZER** y observá cómo `/organizer/access` y `/organizer/dashboard` reflejan la asistencia actualizada.
+
+
+
+CONTRASEÑA DATABASE Lozamateojuli123
