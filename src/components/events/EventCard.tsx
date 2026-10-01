@@ -1,15 +1,24 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Calendar, MapPin, Ticket, Flame } from 'lucide-react';
+import { Calendar, MapPin, Ticket, Flame, Heart } from 'lucide-react';
 import { EventWithDetails } from '@/types/event.types';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatEventShortDate } from '@/lib/utils/date';
+import { isEventFavorite, toggleFavorite } from '@/lib/services/favorite.service';
 
 interface EventCardProps {
   event: EventWithDetails;
 }
 
 export function EventCard({ event }: EventCardProps) {
+  const [fav, setFav] = useState(false);
+
+  useEffect(() => {
+    setFav(isEventFavorite(event.id));
+  }, [event.id]);
+
   const { day, month } = formatEventShortDate(event.starts_at);
   const lowestPrice = event.ticket_types && event.ticket_types.length > 0
     ? Math.min(...event.ticket_types.filter(t => t.is_active).map(t => t.price))
@@ -58,6 +67,21 @@ export function EventCard({ event }: EventCardProps) {
             {event.category.name}
           </div>
         )}
+
+        {/* Favorite Heart Toggle Button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite(event.id);
+            setFav(!fav);
+          }}
+          className="absolute bottom-3 right-3 p-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-slate-300 hover:text-rose-400 hover:scale-110 transition-all shadow-md z-10"
+          title="Guardar en favoritos"
+        >
+          <Heart className={`w-4 h-4 ${fav ? 'fill-rose-500 text-rose-500' : 'text-slate-300'}`} />
+        </button>
       </Link>
 
       {/* Content */}
