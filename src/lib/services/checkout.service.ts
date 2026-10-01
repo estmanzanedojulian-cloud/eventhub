@@ -80,14 +80,13 @@ export async function executeCheckout(request: CheckoutRequest): Promise<Checkou
   // Apply discount
   let discountAmount = 0;
   if (request.discount_code) {
-    const code = request.discount_code.trim().toUpperCase();
-    if (code === 'EVENTHUB20') {
-      discountAmount = Math.round(subtotal * 0.2);
-    } else if (code === 'AMIGOS5000') {
-      discountAmount = Math.min(5000, subtotal);
-    } else {
-      throw new Error('Código de descuento inválido');
+    const { validateDiscountCode, recordDiscountUsage } = await import('./discount.service');
+    const validation = validateDiscountCode(request.discount_code, event.id, subtotal);
+    if (!validation.valid) {
+      throw new Error(validation.error || 'Código de descuento inválido');
     }
+    discountAmount = validation.discountAmount;
+    recordDiscountUsage(request.discount_code);
   }
 
   const total = Math.max(0, subtotal - discountAmount);

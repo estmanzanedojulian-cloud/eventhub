@@ -7,6 +7,7 @@ import { EventWithDetails } from '@/types/event.types';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatEventShortDate } from '@/lib/utils/date';
 import { isEventFavorite, toggleFavorite } from '@/lib/services/favorite.service';
+import { useToast } from '@/context/ToastContext';
 
 interface EventCardProps {
   event: EventWithDetails;
@@ -14,9 +15,19 @@ interface EventCardProps {
 
 export function EventCard({ event }: EventCardProps) {
   const [fav, setFav] = useState(false);
+  const { success, info } = useToast();
 
   useEffect(() => {
     setFav(isEventFavorite(event.id));
+
+    const handleFavChange = () => {
+      setFav(isEventFavorite(event.id));
+    };
+
+    window.addEventListener('eventhub_favorites_updated', handleFavChange);
+    return () => {
+      window.removeEventListener('eventhub_favorites_updated', handleFavChange);
+    };
   }, [event.id]);
 
   const { day, month } = formatEventShortDate(event.starts_at);
@@ -28,6 +39,18 @@ export function EventCard({ event }: EventCardProps) {
   const totalSold = event.ticket_types?.reduce((acc, t) => acc + t.sold_quantity, 0) || 0;
   const isAlmostSoldOut = totalSold / totalQuantity >= 0.8 && totalSold < totalQuantity;
   const isSoldOut = totalSold >= totalQuantity;
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const newStatus = await toggleFavorite(event.id);
+    setFav(newStatus);
+    if (newStatus) {
+      success('Favorito guardado', `Agregaste "${event.title}" a tus favoritos`);
+    } else {
+      info('Favorito eliminado', `Eliminaste "${event.title}" de tus favoritos`);
+    }
+  };
 
   return (
     <div className="group relative flex flex-col bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700 hover:shadow-card transition-all duration-300">
@@ -71,16 +94,11 @@ export function EventCard({ event }: EventCardProps) {
         {/* Favorite Heart Toggle Button */}
         <button
           type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleFavorite(event.id);
-            setFav(!fav);
-          }}
-          className="absolute bottom-3 right-3 p-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-slate-300 hover:text-rose-400 hover:scale-110 transition-all shadow-md z-10"
-          title="Guardar en favoritos"
+          onClick={handleToggleFavorite}
+          className="absolute bottom-3 right-3 p-2.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-slate-300 hover:text-rose-400 hover:scale-110 active:scale-95 transition-all shadow-md z-10"
+          title={fav ? 'Quitar de favoritos' : 'Guardar en favoritos'}
         >
-          <Heart className={`w-4 h-4 ${fav ? 'fill-rose-500 text-rose-500' : 'text-slate-300'}`} />
+          <Heart className={`w-4 h-4 transition-all duration-200 ${fav ? 'fill-rose-500 text-rose-500 scale-110' : 'text-slate-300 group-hover:text-rose-300'}`} />
         </button>
       </Link>
 
@@ -99,34 +117,29 @@ export function EventCard({ event }: EventCardProps) {
 
           <div className="mt-4 space-y-1.5 text-xs text-slate-400">
             <div className="flex items-center gap-2">
-              <Calendar className="w-3.5 h-3.5 text-brand-400 shrink-0" />
-              <span>{new Date(event.starts_at).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(event.starts_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</span>
-            </div>
-            <div className="flex items-center gap-2">
               <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="truncate">{event.venue_name}, {event.city}</span>
+              <span className="truncate">{event.venue_name} • {event.city}</span>
             </div>
           </div>
         </div>
 
-        {/* Price & Buy Button Footer */}
-        <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between">
+        {/* Bottom Info & Price */}
+        <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-slate-400 block uppercase font-medium">Desde</span>
-            <span className="font-bold text-base text-white">
-              {formatCurrency(lowestPrice)}
+            <span className="text-[10px] text-slate-400 uppercase font-semibold block">Desde</span>
+            <span className="font-display font-black text-lg text-white">
+              {lowestPrice === 0 ? 'Gratis' : formatCurrency(lowestPrice)}
             </span>
           </div>
 
           <Link
             href={`/eventos/${event.slug}`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-glow transition-all active:scale-95"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-brand-600/90 hover:bg-brand-500 text-white shadow-glow hover:shadow-glow-accent transition-all duration-200"
           >
             <Ticket className="w-3.5 h-3.5" />
             Comprar
           </Link>
         </div>
-
       </div>
 
     </div>

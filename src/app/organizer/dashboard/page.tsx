@@ -14,7 +14,8 @@ import {
   Search,
   CheckCircle2,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Tag
 } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SalesChart } from '@/components/dashboard/SalesChart';
@@ -136,17 +137,33 @@ export default function OrganizerDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Link
+            href="/organizer/discounts"
+            className="px-3.5 py-2.5 rounded-xl font-bold text-xs bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-200 transition-all flex items-center gap-1.5"
+            title="Administrar códigos de descuento y promociones"
+          >
+            <Tag className="w-4 h-4 text-emerald-400" /> Descuentos
+          </Link>
+
+          <Link
+            href="/organizer/staff"
+            className="px-3.5 py-2.5 rounded-xl font-bold text-xs bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-200 transition-all flex items-center gap-1.5"
+            title="Designar personal autorizado para validar accesos"
+          >
+            <Users className="w-4 h-4 text-emerald-400" /> Staff Puerta
+          </Link>
+
           <Link
             href="/organizer/access"
-            className="px-4 py-2.5 rounded-xl font-bold text-xs bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-200 transition-all flex items-center gap-2"
+            className="px-3.5 py-2.5 rounded-xl font-bold text-xs bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-200 transition-all flex items-center gap-1.5"
           >
-            <QrCode className="w-4 h-4 text-emerald-400" /> Control de Acceso
+            <QrCode className="w-4 h-4 text-emerald-400" /> Control Acceso
           </Link>
 
           <Link
             href="/organizer/events/new"
-            className="px-5 py-2.5 rounded-xl font-bold text-xs bg-brand-600 hover:bg-brand-500 text-white shadow-glow transition-all flex items-center gap-2"
+            className="px-4 py-2.5 rounded-xl font-bold text-xs bg-brand-600 hover:bg-brand-500 text-white shadow-glow transition-all flex items-center gap-1.5"
           >
             <CalendarPlus className="w-4 h-4" /> Crear Evento
           </Link>

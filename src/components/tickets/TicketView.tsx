@@ -13,7 +13,8 @@ import {
   AlertCircle,
   Copy,
   Check,
-  Download
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { generateQRPayload } from '@/lib/utils/qr';
 import { formatCurrency } from '@/lib/utils/currency';
@@ -171,6 +172,17 @@ export function TicketView({ ticket, showFullDetails = true }: TicketViewProps) 
             <p className="text-[10px] text-slate-500 text-center mt-3 max-w-xs">
               Presentá este código en el acceso al evento para su lectura con la cámara del staff.
             </p>
+
+            {/* Direct Ticket Link Button */}
+            <div className="mt-4 pt-3 border-t border-slate-800/80 w-full">
+              <Link
+                href={`/mis-entradas/${ticket.id || ticket.ticket_code}`}
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-brand-500/60 text-xs font-bold text-slate-200 hover:text-white flex items-center justify-center gap-2 transition-all shadow-sm group/btn"
+              >
+                <span>Ver pase individual / Descargar PDF</span>
+                <ExternalLink className="w-3.5 h-3.5 text-brand-400 group-hover/btn:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
           </div>
 
         </div>

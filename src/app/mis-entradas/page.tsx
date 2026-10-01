@@ -192,6 +192,17 @@ export default function MisEntradasPage() {
                       <p className="text-[11px] text-slate-400">
                         Titular: {t.attendee_name}
                       </p>
+
+                      <div className="pt-1.5 flex items-center gap-2">
+                        <Link
+                          href={`/mis-entradas/${t.id || t.ticket_code}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-400 hover:text-brand-300 transition-colors"
+                        >
+                          <span>Pase individual & PDF</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      </div>
                     </div>
 
                     <div className="flex flex-col items-end gap-2 shrink-0">

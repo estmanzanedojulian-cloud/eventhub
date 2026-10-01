@@ -14,6 +14,7 @@ export function saveLocalFavorites(ids: string[]) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem('eventhub_favorite_ids', JSON.stringify(ids));
+    window.dispatchEvent(new CustomEvent('eventhub_favorites_updated', { detail: ids }));
   } catch {}
 }
 
@@ -36,12 +37,19 @@ export async function toggleFavorite(eventId: string): Promise<boolean> {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       if (exists) {
-        await supabase.from('favorites').delete().eq('user_id', user.id).eq('event_id', eventId);
+        await (supabase.from('favorites') as any)
+          .delete()
+          .eq('user_id', user.id)
+          .eq('event_id', eventId);
       } else {
-        await supabase.from('favorites').insert({ user_id: user.id, event_id: eventId });
+        await (supabase.from('favorites') as any)
+          .insert({ user_id: user.id, event_id: eventId });
       }
     }
-  } catch {}
+  } catch (err) {
+    // Non-blocking sync error
+    console.debug('Favorite sync notice:', err);
+  }
 
   return !exists;
 }

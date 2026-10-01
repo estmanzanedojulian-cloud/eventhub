@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Tag,
@@ -13,62 +13,26 @@ import {
   ArrowLeft,
   Sparkles,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Trash2,
+  Copy,
+  Check
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
 import { useToast } from '@/context/ToastContext';
 import { SEED_EVENTS } from '@/lib/services/event.service';
-
-interface DiscountCodeItem {
-  id: string;
-  code: string;
-  type: 'percentage' | 'fixed';
-  value: number;
-  max_uses: number;
-  used_count: number;
-  event_title: string;
-  is_active: boolean;
-  expires_at: string;
-}
+import {
+  DiscountCodeItem,
+  getDiscounts,
+  createDiscount,
+  toggleDiscountActive,
+  deleteDiscount
+} from '@/lib/services/discount.service';
 
 export default function OrganizerDiscountsPage() {
-  const { success, warning } = useToast();
-
-  const [discounts, setDiscounts] = useState<DiscountCodeItem[]>([
-    {
-      id: 'd_1',
-      code: 'EVENTHUB20',
-      type: 'percentage',
-      value: 20,
-      max_uses: 500,
-      used_count: 34,
-      event_title: 'Todos los eventos',
-      is_active: true,
-      expires_at: '2026-12-31',
-    },
-    {
-      id: 'd_2',
-      code: 'AMIGOS5000',
-      type: 'fixed',
-      value: 5000,
-      max_uses: 100,
-      used_count: 89,
-      event_title: 'Neon Echoes: Sunset Festival 2026',
-      is_active: true,
-      expires_at: '2026-11-15',
-    },
-    {
-      id: 'd_3',
-      code: 'EARLYVIP30',
-      type: 'percentage',
-      value: 30,
-      max_uses: 50,
-      used_count: 50,
-      event_title: 'AI & Cloud Future Summit 2026',
-      is_active: false,
-      expires_at: '2026-08-30',
-    },
-  ]);
+  const { success, warning, info } = useToast();
+  const [discounts, setDiscounts] = useState<DiscountCodeItem[]>([]);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCode, setNewCode] = useState('');
@@ -76,8 +40,26 @@ export default function OrganizerDiscountsPage() {
   const [newValue, setNewValue] = useState(15);
   const [newMaxUses, setNewMaxUses] = useState(200);
   const [newEventId, setNewEventId] = useState('all');
+  const [newExpiresAt, setNewExpiresAt] = useState('2026-12-31');
 
-  const handleCreateDiscount = (e: React.FormEvent) => {
+  const loadData = () => {
+    setDiscounts(getDiscounts());
+  };
+
+  useEffect(() => {
+    loadData();
+
+    const handleUpdate = () => {
+      loadData();
+    };
+
+    window.addEventListener('eventhub_discounts_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('eventhub_discounts_updated', handleUpdate);
+    };
+  }, []);
+
+  const handleCreateDiscount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCode.trim()) {
       warning('Código vacío', 'Ingresá un código promocional válido');
@@ -89,30 +71,51 @@ export default function OrganizerDiscountsPage() {
         ? 'Todos los eventos'
         : SEED_EVENTS.find((e) => e.id === newEventId)?.title || 'Evento específico';
 
-    const created: DiscountCodeItem = {
-      id: 'd_' + Math.random().toString(36).substring(2, 9),
+    const created = await createDiscount({
       code: newCode.trim().toUpperCase(),
       type: newType,
       value: Number(newValue),
       max_uses: Number(newMaxUses),
-      used_count: 0,
+      event_id: newEventId === 'all' ? null : newEventId,
       event_title: eventTitle,
-      is_active: true,
-      expires_at: '2026-12-31',
-    };
+      expires_at: newExpiresAt,
+    });
 
-    setDiscounts([created, ...discounts]);
+    loadData();
     setShowCreateModal(false);
     setNewCode('');
-    success('Cupón creado', `El código ${created.code} ya está activo para el checkout`);
+    success('Cupón creado', `El código "${created.code}" ya está activo y disponible en el checkout`);
   };
 
-  const handleToggleActive = (id: string) => {
-    setDiscounts(
-      discounts.map((d) => (d.id === id ? { ...d, is_active: !d.is_active } : d))
-    );
-    success('Estado actualizado', 'Se actualizó la disponibilidad del código');
+  const handleToggleActive = (id: string, code: string) => {
+    const updated = toggleDiscountActive(id);
+    loadData();
+    if (updated?.is_active) {
+      success('Cupón reactivado', `El código ${code} fue reactivado exitosamente`);
+    } else {
+      info('Cupón pausado', `El código ${code} fue pausado temporalmente`);
+    }
   };
+
+  const handleDelete = (id: string, code: string) => {
+    if (confirm(`¿Eliminar definitivamente el cupón ${code}?`)) {
+      deleteDiscount(id);
+      loadData();
+      info('Cupón eliminado', `Se eliminó el código promocional ${code}`);
+    }
+  };
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    success('Código copiado', `Copiaste "${code}" al portapapeles`);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  // KPIs
+  const totalCodes = discounts.length;
+  const activeCodes = discounts.filter((d) => d.is_active).length;
+  const totalUses = discounts.reduce((acc, d) => acc + (d.used_count || 0), 0);
 
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -127,34 +130,75 @@ export default function OrganizerDiscountsPage() {
             <ArrowLeft className="w-4 h-4" /> Volver al dashboard
           </Link>
           <h1 className="font-display text-3xl font-extrabold text-white">
-            Códigos de Descuento y Promociones
+            Gestión de Códigos de Descuento
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Generá cupones promocionales con porcentaje o importe fijo y control de usos máximos.
+            Creá y administrá cupones promocionales con porcentaje o monto fijo y control de stock de usos.
           </p>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-5 py-2.5 rounded-xl font-bold text-xs bg-brand-600 hover:bg-brand-500 text-white shadow-glow transition-all flex items-center gap-2"
+          className="px-5 py-2.5 rounded-xl font-bold text-xs bg-brand-600 hover:bg-brand-500 text-white shadow-glow transition-all flex items-center gap-2 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" /> Crear Nuevo Código
         </button>
       </div>
 
+      {/* Discount KPI Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1 shadow-lg">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase">Cupones Creados</span>
+          <div className="text-2xl font-black text-white font-display flex items-center gap-2">
+            <Tag className="w-5 h-5 text-accent-400" />
+            {totalCodes}
+          </div>
+          <p className="text-[11px] text-slate-500">Configurados para ticketing</p>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1 shadow-lg">
+          <span className="text-[11px] font-semibold text-emerald-400 uppercase">Cupones Activos</span>
+          <div className="text-2xl font-black text-emerald-300 font-display flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            {activeCodes}
+          </div>
+          <p className="text-[11px] text-slate-500">Aceptados al momento del checkout</p>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1 shadow-lg">
+          <span className="text-[11px] font-semibold text-brand-400 uppercase">Usos Canjeados</span>
+          <div className="text-2xl font-black text-brand-300 font-display flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-brand-400" />
+            {totalUses}
+          </div>
+          <p className="text-[11px] text-slate-500">Tickets con descuento procesados</p>
+        </div>
+      </div>
+
       {/* Discounts List Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+          <div>
+            <h3 className="font-display font-bold text-lg text-white">
+              Cupones de Descuento Vigentes
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Los asistentes pueden ingresar estos códigos en el proceso de compra
+            </p>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
                 <th className="pb-3 font-semibold">Código</th>
-                <th className="pb-3 font-semibold">Descuento</th>
+                <th className="pb-3 font-semibold">Beneficio</th>
                 <th className="pb-3 font-semibold">Evento Aplicable</th>
                 <th className="pb-3 font-semibold">Usos Realizados</th>
                 <th className="pb-3 font-semibold">Vencimiento</th>
                 <th className="pb-3 font-semibold">Estado</th>
-                <th className="pb-3 font-semibold text-right">Acción</th>
+                <th className="pb-3 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -163,11 +207,22 @@ export default function OrganizerDiscountsPage() {
                 const isExhausted = d.used_count >= d.max_uses;
 
                 return (
-                  <tr key={d.id} className="hover:bg-slate-800/30">
+                  <tr key={d.id} className="hover:bg-slate-800/30 transition-colors">
                     <td className="py-4 pr-4">
                       <div className="flex items-center gap-2">
-                        <Tag className="w-4 h-4 text-accent-400 shrink-0" />
-                        <span className="font-mono font-black text-sm text-white">{d.code}</span>
+                        <button
+                          onClick={() => handleCopyCode(d.code)}
+                          className="font-mono font-black text-sm text-brand-300 hover:text-white flex items-center gap-1.5 transition-colors"
+                          title="Hacer clic para copiar código"
+                        >
+                          <Tag className="w-3.5 h-3.5 text-accent-400 shrink-0" />
+                          <span>{d.code}</span>
+                          {copiedCode === d.code ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-slate-500 hover:text-slate-300" />
+                          )}
+                        </button>
                       </div>
                     </td>
 
@@ -187,7 +242,7 @@ export default function OrganizerDiscountsPage() {
                         </div>
                         <div className="w-24 bg-slate-950 h-1.5 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${isExhausted ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                            className={`h-full rounded-full transition-all duration-300 ${isExhausted ? 'bg-rose-500' : 'bg-emerald-500'}`}
                             style={{ width: `${percentUsed}%` }}
                           />
                         </div>
@@ -214,12 +269,22 @@ export default function OrganizerDiscountsPage() {
                       )}
                     </td>
 
-                    <td className="py-4 text-right">
+                    <td className="py-4 text-right space-x-3">
                       <button
-                        onClick={() => handleToggleActive(d.id)}
-                        className="text-xs text-brand-400 hover:text-brand-300 font-semibold"
+                        onClick={() => handleToggleActive(d.id, d.code)}
+                        className={`text-xs font-semibold transition-colors ${
+                          d.is_active ? 'text-amber-400 hover:text-amber-300' : 'text-emerald-400 hover:text-emerald-300'
+                        }`}
                       >
                         {d.is_active ? 'Pausar' : 'Activar'}
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(d.id, d.code)}
+                        className="text-slate-400 hover:text-rose-400 transition-colors p-1"
+                        title="Eliminar cupón"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 inline" />
                       </button>
                     </td>
                   </tr>
@@ -241,12 +306,12 @@ export default function OrganizerDiscountsPage() {
             <form onSubmit={handleCreateDiscount} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Código (en mayúsculas) *
+                  Código del Cupón *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. VERANO30"
+                  placeholder="Ej. PROMOVIP25"
                   value={newCode}
                   onChange={(e) => setNewCode(e.target.value.toUpperCase())}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white uppercase font-mono focus:outline-none focus:border-brand-500"
@@ -300,21 +365,33 @@ export default function OrganizerDiscountsPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Aplicable a
+                    Fecha de Vencimiento
                   </label>
-                  <select
-                    value={newEventId}
-                    onChange={(e) => setNewEventId(e.target.value)}
+                  <input
+                    type="date"
+                    value={newExpiresAt}
+                    onChange={(e) => setNewExpiresAt(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-                  >
-                    <option value="all">Todos los eventos</option>
-                    {SEED_EVENTS.map((evt) => (
-                      <option key={evt.id} value={evt.id}>
-                        {evt.title}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Aplicable a
+                </label>
+                <select
+                  value={newEventId}
+                  onChange={(e) => setNewEventId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                >
+                  <option value="all">Todos los eventos</option>
+                  {SEED_EVENTS.map((evt) => (
+                    <option key={evt.id} value={evt.id}>
+                      {evt.title}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex gap-2 pt-4">

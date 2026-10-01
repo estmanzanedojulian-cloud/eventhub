@@ -121,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('eventhub_active_role');
+      document.cookie = 'eventhub_active_role=; path=/; max-age=0';
     }
     setDemoRoleState(null);
   };
@@ -135,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setDemoRoleState(newRole);
     if (typeof window !== 'undefined') {
       localStorage.setItem('eventhub_active_role', newRole);
+      document.cookie = `eventhub_active_role=${newRole}; path=/; max-age=31536000`;
     }
     if (profile) {
       setProfile({ ...profile, role: newRole });

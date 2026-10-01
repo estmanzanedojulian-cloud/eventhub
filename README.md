@@ -129,4 +129,3 @@ La aplicación estará disponible en [http://localhost:3000](http://localhost:30
 
 
 
-CONTRASEÑA DATABASE Lozamateojuli123

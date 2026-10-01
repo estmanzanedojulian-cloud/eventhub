@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -15,17 +15,36 @@ import {
   Menu,
   X,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  Heart,
+  Tag,
+  Users
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils/cn';
 import { UserRole } from '@/types/database.types';
+import { getLocalFavorites } from '@/lib/services/favorite.service';
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, profile, role, isOrganizer, isStaff, isAdmin, signOut, setDemoRole } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [favCount, setFavCount] = useState(0);
+
+  useEffect(() => {
+    setFavCount(getLocalFavorites().length);
+
+    const handleFavUpdate = (e: any) => {
+      const ids = e.detail || getLocalFavorites();
+      setFavCount(ids.length);
+    };
+
+    window.addEventListener('eventhub_favorites_updated', handleFavUpdate);
+    return () => {
+      window.removeEventListener('eventhub_favorites_updated', handleFavUpdate);
+    };
+  }, []);
 
   const rolesList: { id: UserRole; label: string; desc: string; color: string }[] = [
     { id: 'USER', label: 'Asistente (User)', desc: 'Explorar, comprar y ver QR', color: 'bg-indigo-500' },
@@ -58,7 +77,7 @@ export function Navbar() {
           <Link
             href="/eventos"
             className={cn(
-              "px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
+              "px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
               pathname === '/eventos'
                 ? "bg-slate-800 text-white shadow-sm"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/50"
@@ -72,7 +91,7 @@ export function Navbar() {
           <Link
             href="/mis-entradas"
             className={cn(
-              "px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
+              "px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
               pathname.startsWith('/mis-entradas')
                 ? "bg-slate-800 text-white shadow-sm"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/50"
@@ -82,29 +101,75 @@ export function Navbar() {
             Mis Entradas
           </Link>
 
+          {/* Favoritos Link with Count Badge */}
+          <Link
+            href="/favoritos"
+            className={cn(
+              "px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
+              pathname === '/favoritos'
+                ? "bg-rose-950/40 text-rose-300 border border-rose-500/30"
+                : "text-slate-300 hover:text-rose-300 hover:bg-slate-800/50"
+            )}
+            title="Mis Eventos Favoritos"
+          >
+            <Heart className={cn("w-4 h-4", favCount > 0 ? "fill-rose-500 text-rose-500" : "text-rose-400")} />
+            <span>Favoritos</span>
+            {favCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                {favCount}
+              </span>
+            )}
+          </Link>
+
           {/* Organizer Links */}
           {isOrganizer && (
-            <>
+            <div className="flex items-center gap-1 pl-1 ml-1 border-l border-slate-800">
               <Link
                 href="/organizer/dashboard"
                 className={cn(
-                  "px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
+                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
                   pathname.startsWith('/organizer/dashboard')
                     ? "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
                     : "text-slate-300 hover:text-emerald-300 hover:bg-emerald-950/30"
                 )}
               >
                 <LayoutDashboard className="w-4 h-4 text-emerald-400" />
-                Panel Organizador
+                Panel
+              </Link>
+              <Link
+                href="/organizer/discounts"
+                className={cn(
+                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
+                  pathname.startsWith('/organizer/discounts')
+                    ? "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
+                    : "text-slate-300 hover:text-emerald-300 hover:bg-emerald-950/30"
+                )}
+                title="Gestión de Cupones de Descuento"
+              >
+                <Tag className="w-4 h-4 text-emerald-400" />
+                Descuentos
+              </Link>
+              <Link
+                href="/organizer/staff"
+                className={cn(
+                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
+                  pathname.startsWith('/organizer/staff')
+                    ? "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
+                    : "text-slate-300 hover:text-emerald-300 hover:bg-emerald-950/30"
+                )}
+                title="Gestión de Personal de Control y Acceso"
+              >
+                <Users className="w-4 h-4 text-emerald-400" />
+                Staff
               </Link>
               <Link
                 href="/organizer/events/new"
-                className="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-1.5"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-1.5"
               >
                 <CalendarPlus className="w-4 h-4 text-indigo-400" />
                 Crear Evento
               </Link>
-            </>
+            </div>
           )}
 
           {/* Staff Scanner Link */}
@@ -238,6 +303,18 @@ export function Navbar() {
 
         {/* Mobile menu trigger */}
         <div className="flex md:hidden items-center gap-2">
+          <Link
+            href="/favoritos"
+            className="p-1.5 rounded-md text-slate-300 relative"
+            title="Favoritos"
+          >
+            <Heart className={cn("w-5 h-5", favCount > 0 ? "fill-rose-500 text-rose-500" : "text-slate-300")} />
+            {favCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {favCount}
+              </span>
+            )}
+          </Link>
           <button
             onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
             className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-900 border border-slate-700 text-slate-200"
@@ -270,14 +347,37 @@ export function Navbar() {
           >
             <Ticket className="w-4 h-4 text-accent-500" /> Mis Entradas
           </Link>
+          <Link
+            href="/favoritos"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-rose-300 hover:bg-rose-950/30"
+          >
+            <Heart className="w-4 h-4 fill-rose-500 text-rose-500" /> Favoritos {favCount > 0 && `(${favCount})`}
+          </Link>
           {isOrganizer && (
-            <Link
-              href="/organizer/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-emerald-300 hover:bg-emerald-950/40"
-            >
-              <LayoutDashboard className="w-4 h-4" /> Panel Organizador
-            </Link>
+            <>
+              <Link
+                href="/organizer/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-emerald-300 hover:bg-emerald-950/40"
+              >
+                <LayoutDashboard className="w-4 h-4" /> Panel Organizador
+              </Link>
+              <Link
+                href="/organizer/discounts"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-emerald-300 hover:bg-emerald-950/40"
+              >
+                <Tag className="w-4 h-4" /> Códigos de Descuento
+              </Link>
+              <Link
+                href="/organizer/staff"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-emerald-300 hover:bg-emerald-950/40"
+              >
+                <Users className="w-4 h-4" /> Personal de Staff
+              </Link>
+            </>
           )}
           {isStaff && (
             <Link

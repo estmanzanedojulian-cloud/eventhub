@@ -18,6 +18,7 @@ interface ToastContextType {
   success: (title: string, description?: string) => void;
   error: (title: string, description?: string) => void;
   warning: (title: string, description?: string) => void;
+  info: (title: string, description?: string) => void;
 }
 
 const ToastContext = createContext<ToastContextType>({
@@ -25,6 +26,7 @@ const ToastContext = createContext<ToastContextType>({
   success: () => {},
   error: () => {},
   warning: () => {},
+  info: () => {},
 });
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -58,9 +60,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const success = (title: string, description?: string) => addToast({ type: 'success', title, description });
   const error = (title: string, description?: string) => addToast({ type: 'error', title, description });
   const warning = (title: string, description?: string) => addToast({ type: 'warning', title, description });
+  const info = (title: string, description?: string) => addToast({ type: 'info', title, description });
 
   return (
-    <ToastContext.Provider value={{ toast: addToast, success, error, warning }}>
+    <ToastContext.Provider value={{ toast: addToast, success, error, warning, info }}>
       {children}
       {/* Toast Notification Container */}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-md w-full px-4 pointer-events-none">
